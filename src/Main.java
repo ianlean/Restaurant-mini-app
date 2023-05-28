@@ -50,9 +50,9 @@ public class Main {
                 case 5 -> closeOut();
                 case 6 -> {
                     exit = true;
-                    System.out.println("C-YA LATER FUCK FACE");
+                    System.out.println("Good bye");
                 }
-                default -> System.out.println("fucking idiot");
+                default -> System.out.println("Try valid input");
             }
         }
     }
@@ -91,7 +91,7 @@ public class Main {
             case 5 -> checkPosition();
             case 6 -> { break;}
 
-            default -> System.out.println("fucking idiot");
+            default -> System.out.println("Enter valid input");
         }
 
     }
@@ -168,7 +168,7 @@ public class Main {
     public static String validState() {
         String temp = s.next();
         while(temp.length() != 2) {
-            System.out.println("I said to abbreviate: ");
+            System.out.println("Must be abbreviated: ");
             temp = s.next();
         }
         return temp;
