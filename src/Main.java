@@ -1,6 +1,6 @@
 import java.sql.*;
 import java.util.*;
-
+import java.util.Date;
 
 
 public class Main {
@@ -28,7 +28,7 @@ public class Main {
 
         dbConnection = DriverManager.getConnection(URL, "root",args[0]);
         myStmt = dbConnection.createStatement();
-        System.out.println("Hello, please enter the Restaurant number you are working from: (1-9) ");
+        System.out.println("Hello, please enter the Restaurant number you are working from: (1-3) ");
         getRest();
         boolean exit = false;
         while (!exit) {
@@ -58,15 +58,57 @@ public class Main {
     }
     public static void closeOut(){
         System.out.println("Gathering days sale");
+        Date today = new Date();
+
+
         try {
-            ResultSet rs = myStmt.executeQuery("select SUM(Total_Sale) from orders");
-            showOutput(rs);
+            myRs = myStmt.executeQuery("select SUM(Total_Sale) as Total_Sales from orders");
+            showOutput(myRs);
+            prepStmt = dbConnection.prepareStatement("Select Employee_Cost + Building_Cost as Operation_Cost from Daily_Operation_Cost where Restaurant_Number = ?");
+            prepStmt.setString(1, "Dicks"+ currentRestaurant);
+            myRs = prepStmt.executeQuery();
+            showOutput(myRs);
+
+
+
             myStmt.execute("DELETE FROM meal_order");
             myStmt.execute("DELETE FROM orders");
+            System.exit(1);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
+
+    public static void updateInventoryQuantity(String meal){
+        try {
+            prepStmt = dbConnection.prepareStatement("SELECT Product_Name, Quantity_Used FROM Ingredient_Used WHERE Meal_Name = ?;");
+            prepStmt.setString(1, meal);
+            myRs = prepStmt.executeQuery();
+
+            //Custom loop to get numbers for each ingredit for each meal?????????????????
+            while (myRs.next()) {
+                    String productName = myRs.getString(1);
+                    String quantityUsed = myRs.getString(2);
+                    prepStmt = dbConnection.prepareStatement("SELECT Quantity_On_Hand FROM Products WHERE Product_Name = ? and Restaurant_Number = ?;");
+                    prepStmt.setString(1, productName);
+                prepStmt.setString(2, "Dicks"+ currentRestaurant);
+                    ResultSet tempRS = prepStmt.executeQuery();
+                    tempRS.next();
+                    String quantityOnHand = tempRS.getString(1);
+                    prepStmt = dbConnection.prepareStatement("Update Products Set Quantity_On_Hand = ? Where Product_Name = ? and Restaurant_Number = ?;");
+                    Double temp = Double.parseDouble(quantityOnHand)-Double.parseDouble(quantityUsed);
+                    prepStmt.setDouble(1, temp);
+                    prepStmt.setString(2, productName);
+                prepStmt.setString(3, "Dicks"+ currentRestaurant);
+                    prepStmt.executeUpdate();
+                    System.out.println("THE QUANTITY WAS CHANGED FROM: " + quantityOnHand + " to " + temp);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
     public static void addRemoveEmployee(){
         System.out.println("What would you like to do with Employee:");
         System.out.println("1 - Add new employee");
@@ -127,9 +169,10 @@ public class Main {
             insureValidity();
             int pay = s.nextInt();
 
-            prepStmt = dbConnection.prepareStatement("INSERT INTO Payroll VALUES(?,?)");
+            prepStmt = dbConnection.prepareStatement("INSERT INTO Payroll VALUES(?,?,?)");
             prepStmt.setString(1, id);
-            prepStmt.setString(2, String.valueOf(pay));
+            prepStmt.setString(2, "Dicks"+currentRestaurant);
+            prepStmt.setString(3, String.valueOf(pay));
             prepStmt.executeUpdate();
 
             prepStmt = dbConnection.prepareStatement("INSERT INTO Employee VALUES(?,?,?,?,?,?)");
@@ -159,6 +202,7 @@ public class Main {
             prepStmt.setString(2,title);
             prepStmt.executeUpdate();
         } catch (SQLException e) {
+            System.out.println("this employee already exists");
             e.printStackTrace();
 
         }
@@ -216,6 +260,7 @@ public class Main {
                 showOutput(prepStmt.executeQuery());
             }
         } catch (SQLException e) {
+            System.out.println("this employee does not exists");
             e.printStackTrace();
         }
     }
@@ -231,15 +276,20 @@ public class Main {
     }
 
     private static void printData(ResultSet rs, ResultSetMetaData rsmd) throws SQLException {
+        System.out.println("-------------------------------------------------------------------------------");
+
         int columnsNumber = rsmd.getColumnCount();
         while (rs.next()) {
             for (int i = 1; i <= columnsNumber; i++) {
-                if (i > 1) System.out.print(" -  ");
+                //if (i > 1) System.out.print(" -  ");
                 String columnValue = rs.getString(i);
-                System.out.print(columnValue);
+
+                System.out.print(rsmd.getColumnName(i) + ": "+ columnValue + " ");
             }
             System.out.println("");
         }
+        System.out.println("-------------------------------------------------------------------------------");
+
     }
 
     public static void checkPay(){
@@ -254,6 +304,7 @@ public class Main {
                 showOutput(prepStmt.executeQuery());
             }
         } catch (SQLException e) {
+            System.out.println("this employee does not exists");
             e.printStackTrace();
         }
     }
@@ -270,6 +321,7 @@ public class Main {
 
             }
         } catch (SQLException e) {
+            System.out.println("this employee does not exists");
             throw new RuntimeException(e);
         }
 
@@ -289,18 +341,22 @@ public class Main {
             switch (s.nextInt()) {
                 case 1 -> {
                     orderList.add("Hamburger");
+                    updateInventoryQuantity("Hamburger");
                     totalCost += 2;
                 }
                 case 2 -> {
                     orderList.add("Cheeseburger");
+                    updateInventoryQuantity("Cheeseburger");
                     totalCost += 3;
                 }
                 case 3 -> {
                     orderList.add("Special");
+                    updateInventoryQuantity("Special");
                     totalCost += 4;
                 }
                 case 4 -> {
                     orderList.add("Deluxe");
+                    updateInventoryQuantity("Deluxe");
                     totalCost += 5;
                 }
                 case 5 -> orderDone = true;
@@ -350,27 +406,28 @@ public class Main {
                         break;
                     case 3:
                         orderList.add("Lettuce");
-                        orderProductHelper("1/8lbs Patty", 200);
+                        orderProductHelper("Lettuce", 200);
                         break;
                     case 4:
                         orderList.add("Ketchup");
-                        orderProductHelper("1/8lbs Patty", 2);
+                        orderProductHelper("Ketchup", 2);
                         break;
                     case 5:
                         orderList.add("Mayo");
-                        orderProductHelper("1/8lbs Patty", 2);
+                        orderProductHelper("Mayo", 2);
                         break;
                     case 6:
                         orderList.add("Mustard");
-                        orderProductHelper("1/8lbs Patty", 2);
+                        orderProductHelper("Mustard", 2);
                         break;
                     case 7:
                         orderList.add("Pickle Relish");
-                        orderProductHelper("1/8lbs Patty", 4);
+                        orderProductHelper("Pickle Relish", 100);
                         break;
                     case 8:
                         System.out.println((orderList.toString()));
                         System.out.println("Order total: " + totalCost);
+                        orderList = new ArrayList<>();
                     default:
                         System.out.println("Choose 1 - 8");
                         return;
@@ -396,76 +453,81 @@ public class Main {
     public static void orderProductHelper(String product,int quantity) throws SQLException {
         ResultSet temp;
 
-        prepStmt = dbConnection.prepareStatement("Select  Quantity_On_Hand From products Where Product_Name = ?");
+        prepStmt = dbConnection.prepareStatement("Select  Quantity_On_Hand From products Where Product_Name = ? and Restaurant_Number = ?" );
         prepStmt.setString(1, product);
+        prepStmt.setString(2, "Dicks"+currentRestaurant);
         ResultSet rs = prepStmt.executeQuery();
         rs.next();
-        if (Integer.parseInt(rs.getString("Quantity_On_Hand")) < quantity){
-            orderList.add("1/8lbs Patty");
+        if (Double.parseDouble(rs.getString("Quantity_On_Hand")) < quantity){
             prepStmt = dbConnection.prepareStatement("Select Unit_Price+Shipping_Cost as total From ingredient_source Where Product_Name = ?");
             prepStmt.setString(1, product);
+
             temp = prepStmt.executeQuery();
             temp.next();
-            totalCost += Integer.parseInt(temp.getString("total"));
+            totalCost += Double.parseDouble(temp.getString("total"));
         } else {
             System.out.println("Too much already on hand");
         }
     }
 
     public static void updateProduct() throws SQLException{
-        String product; int quantity;
-        System.out.println("Enter Product to update quantity on hand.");
-        System.out.println("1 - 1/8lbs Patty");
-        System.out.println("2 - Cheese");
-        System.out.println("3 - Lettuce");
-        System.out.println("4 - Ketchup");
-        System.out.println("5 - Mayo");
-        System.out.println("6 - Mustard");
-        System.out.println("7 - Pickle Relish");
-        System.out.println("8 - Exit");
+        String product = ""; Double quantity;
+        orderDone = true;
+        while(orderDone) {
+            System.out.println("Enter Product to update quantity on hand.");
+            System.out.println("1 - 1/8lbs Patty");
+            System.out.println("2 - Cheese");
+            System.out.println("3 - Lettuce");
+            System.out.println("4 - Ketchup");
+            System.out.println("5 - Mayo");
+            System.out.println("6 - Mustard");
+            System.out.println("7 - Pickle Relish");
+            System.out.println("8 - Exit");
 
-        insureValidity();
-        switch (s.nextInt()) {
-            case 1:
-                product = ("1/8lbs Patty");
-                break;
-            case 2:
-                product = ("Cheese");
-                break;
-            case 3:
-                product = ("Lettuce");
-                break;
-            case 4:
-                product = ("Ketchup");
-                break;
-            case 5:
-                product = ("Mayo");
-                break;
-            case 6:
-                product = ("Mustard");
-                break;
-            case 7:
-                product = ("Pickle Relish");
-                break;
-            case 8:
-                System.out.println("Inventory updated successfully");
-            default:
-                System.out.println("Choose 1 - 8");
-                return;
+            insureValidity();
+            switch (s.nextInt()) {
+                case 1:
+                    product = ("1/8lbs Patty");
+                    break;
+                case 2:
+                    product = ("Cheese");
+                    break;
+                case 3:
+                    product = ("Lettuce");
+                    break;
+                case 4:
+                    product = ("Ketchup");
+                    break;
+                case 5:
+                    product = ("Mayo");
+                    break;
+                case 6:
+                    product = ("Mustard");
+                    break;
+                case 7:
+                    product = ("Pickle Relish");
+                    break;
+                case 8:
+                    System.out.println("Inventory updated successfully");
+                    return;
+                default:
+                    System.out.println("Choose 1 - 8");
+                    break;
+            }
+            System.out.println("Enter received quantity: ");
+            insureValidity();
+            quantity = s.nextDouble();
+            prepStmt = dbConnection.prepareStatement("Select  Quantity_On_Hand From products Where Product_Name = ?");
+            prepStmt.setString(1, product);
+            ResultSet rs = prepStmt.executeQuery();
+            rs.next();
+            quantity += Double.parseDouble(rs.getString("Quantity_On_Hand"));
+            prepStmt = dbConnection.prepareStatement("Update Products Set Quantity_On_Hand = ? Where Product_Name = ? and Restaurant_Number = ?");
+            prepStmt.setString(1, String.valueOf(quantity));
+            prepStmt.setString(2, product);
+            prepStmt.setString(3, "Dicks" + currentRestaurant);
+            prepStmt.executeUpdate();
         }
-        System.out.println("Enter received quantity: ");
-        insureValidity();
-        quantity = s.nextInt();
-        prepStmt = dbConnection.prepareStatement("Select  Quantity_On_Hand From products Where Product_Name = ?");
-        prepStmt.setString(1, product);
-        ResultSet rs = prepStmt.executeQuery();
-        rs.next();
-        System.out.println(rs.toString());
-        quantity +=Integer.parseInt(rs.getString("Quantity_On_Hand"));
-        prepStmt = dbConnection.prepareStatement("Update Products Set Quantity_On_Hand = ? Where Product_Name = ?");
-        prepStmt.setString(1, String.valueOf(quantity));
-        prepStmt.setString(2,product);
-        prepStmt.executeUpdate();
 
     }
     public static String ticketCorrector(){
@@ -495,7 +557,7 @@ public class Main {
 
             int count = 0;
             myStmt = dbConnection.createStatement();
-            if(orderList.contains("Hamburger")){
+            if(orderList.contains("Hamburger"))  {
                 orderMealHelper("Hamburger");
             }
             if(orderList.contains("Cheeseburger")){
@@ -510,10 +572,8 @@ public class Main {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        System.out.println(currentTicket);
         currentTicket++;
         orderList = new ArrayList<>();
-        System.out.println(currentTicket);
     }
     public static void readQueryData(String query) throws SQLException {
         myRs = Stmt.executeQuery(query);
