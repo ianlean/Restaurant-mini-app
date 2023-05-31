@@ -2,28 +2,72 @@ import java.sql.*;
 import java.util.*;
 import java.util.Date;
 
+/*
+    The driver class for this program
 
+    Authors: Ian McLean and Patrick Tibbals
+*/
 public class Main {
+    /*
+        The URL linking to the database server
+    */
     public static final String URL = "jdbc:mysql://localhost:3306/Restaurant";
+
+    /*
+        Connection object to the database
+    */
     public static Connection dbConnection = null;
 
+    /*
+        A sql statement object for queries
+    */
     public static Statement myStmt;
+    /*
+        A sql statement object for queries (some how we ended up with two)
+    */
     public static Statement Stmt;
+    /*
+        A sql statement object for updates and adding format specifiers to them
+   */
     public static PreparedStatement prepStmt;
+    /*
+        A result set to keep track of queried data
+    */
     public static ResultSet myRs;
-
+    /*
+        The ticket number that the restaurant is currently on
+    */
     public static int currentTicket = 11;
+    /*
+        The current restaurant the user is working from
+    */
     public static int currentRestaurant;
 
+    /*
+        Total cost of an order, resets to 0 when done
+    */
     public static int totalCost = 0;
+
+    /*
+        Boolean to keep track of when an order is complete
+    */
     public static boolean orderDone = false;
+
+    /*
+        Keeps track of product orders, resets when done
+    */
     public static ArrayList<String> orderList = new ArrayList<>();
 
-
+    /*
+        Scanner for user input
+    */
     public static Scanner s = new Scanner(System.in);
-    public Main() throws SQLException {
-    }
 
+    /*
+        The starting point for this program
+
+        @param args - command line arguments, used to collect the password for the database
+     */
     public static void main(String[] args) throws SQLException {
 
         dbConnection = DriverManager.getConnection(URL, "root",args[0]);
@@ -56,6 +100,10 @@ public class Main {
             }
         }
     }
+
+    /*
+        Closes out the restaurant, tallies total costs for the day
+    */
     public static void closeOut(){
         System.out.println("Gathering days sale");
         Date today = new Date();
@@ -79,6 +127,11 @@ public class Main {
         }
     }
 
+    /*
+        Updates inventory after a meal has been placed
+
+        @param meal - The meal that was ordered
+    */
     public static void updateInventoryQuantity(String meal){
         try {
             prepStmt = dbConnection.prepareStatement("SELECT Product_Name, Quantity_Used FROM Ingredient_Used WHERE Meal_Name = ?;");
@@ -101,7 +154,6 @@ public class Main {
                     prepStmt.setString(2, productName);
                 prepStmt.setString(3, "Dicks"+ currentRestaurant);
                     prepStmt.executeUpdate();
-                    System.out.println("THE QUANTITY WAS CHANGED FROM: " + quantityOnHand + " to " + temp);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -109,6 +161,9 @@ public class Main {
 
     }
 
+    /*
+         For employee queries and updates
+    */
     public static void addRemoveEmployee(){
         System.out.println("What would you like to do with Employee:");
         System.out.println("1 - Add new employee");
@@ -137,6 +192,12 @@ public class Main {
         }
 
     }
+
+    /*
+        Updates inventory after a meal has been placed
+
+        @param str - Checks if a string can be turned into a number
+    */
     public static boolean isNumeric(String str) {
         try {
             Double.parseDouble(str);
@@ -145,6 +206,10 @@ public class Main {
             return false;
         }
     }
+
+    /*
+        Adds an employee by requesting data
+    */
     public static void addEmp() throws SQLException {
         try {
             System.out.println("Enter Employee Number (1-999)");
@@ -209,6 +274,11 @@ public class Main {
 
     }
 
+    /*
+        Updates inventory after a meal has been placed
+
+        @return If the state provided is abbreviated
+    */
     public static String validState() {
         String temp = s.next();
         while(temp.length() != 2) {
@@ -217,6 +287,10 @@ public class Main {
         }
         return temp;
     }
+
+    /*
+        Removes an employee by requesting valid ID
+    */
     public static void removeEmp(){
         System.out.println("Enter ID:");
         String emp = s.next();
@@ -248,6 +322,10 @@ public class Main {
             System.out.println("This employee doesn't exist");
         }
     }
+
+    /*
+        Checks employee certification given a valid ID
+    */
     public static void checkCert(){
         System.out.println("Enter ID:");
         String emp = s.next();
@@ -265,6 +343,11 @@ public class Main {
         }
     }
 
+    /*
+        Prints out result set
+
+        @param rs - The result set that is being displayed
+    */
     public static void showOutput(ResultSet rs) {
         ResultSetMetaData rsmd = null;
         try {
@@ -275,6 +358,9 @@ public class Main {
         }
     }
 
+    /*
+        Removes an employee by requesting valid ID
+    */
     private static void printData(ResultSet rs, ResultSetMetaData rsmd) throws SQLException {
         System.out.println("-------------------------------------------------------------------------------");
 
@@ -292,6 +378,9 @@ public class Main {
 
     }
 
+    /*
+       Checks employee pay given valid ID
+    */
     public static void checkPay(){
         System.out.println("Enter ID:");
         String emp = s.next();
@@ -308,6 +397,9 @@ public class Main {
             e.printStackTrace();
         }
     }
+    /*
+       Checks an employees position/title given valid ID
+    */
     public static void checkPosition(){
         System.out.println("Enter ID:");
         String emp = s.next();
@@ -326,6 +418,10 @@ public class Main {
         }
 
     }
+
+    /*
+       Gets valid Integer input from the user
+    */
     public static void insureValidity() {
         while(!s.hasNextInt()) {
             System.out.println("Enter Valid Choice");
@@ -333,6 +429,9 @@ public class Main {
         }
     }
 
+    /*
+      Prompts the user for the meals to add to the order
+    */
     public static void promptWorker() throws SQLException {
         //ResultSet
         while(!orderDone) {
@@ -370,6 +469,9 @@ public class Main {
         orderDone = false;
     }
 
+    /*
+       Gets valid restaurant in range
+    */
     public static void getRest() {
 
         insureValidity();
@@ -382,6 +484,9 @@ public class Main {
         System.out.println("You selected Dicks" + currentRestaurant);
     }
 
+    /*
+       Order more inventory.
+    */
     public static void orderInventory(){
         System.out.println("Product to order:");
         System.out.println("1 - 1/8lbs Patty");
@@ -397,32 +502,43 @@ public class Main {
                 insureValidity();
                 switch (s.nextInt()) {
                     case 1:
-                        orderList.add("1/8lbs Patty");
-                        orderProductHelper("1/8lbs Patty", 800);
+                        if(orderProductHelper("1/8lbs Patty", 800)){
+                            orderList.add("1/8lbs Patty");
+                        }
                         break;
                     case 2:
-                        orderList.add("Cheese");
-                        orderProductHelper("Cheese", 300);
+                        if(orderProductHelper("Cheese", 300)){
+                            orderList.add("Cheese");
+                        }
                         break;
                     case 3:
-                        orderList.add("Lettuce");
-                        orderProductHelper("Lettuce", 200);
+                        if(orderProductHelper("Lettuce", 200)){
+                            orderList.add("Lettuce");
+                        }
                         break;
                     case 4:
-                        orderList.add("Ketchup");
-                        orderProductHelper("Ketchup", 2);
+
+                        if(orderProductHelper("Ketchup", 2)){
+                            orderList.add("Ketchup");
+
+                        }
                         break;
                     case 5:
-                        orderList.add("Mayo");
-                        orderProductHelper("Mayo", 2);
+                        if(orderProductHelper("Mayo", 2)){
+                            orderList.add("Mayo");
+
+                        }
                         break;
                     case 6:
-                        orderList.add("Mustard");
-                        orderProductHelper("Mustard", 2);
+                        if(orderProductHelper("Mustard", 2)){
+                            orderList.add("Mustard");
+
+                        }
                         break;
                     case 7:
-                        orderList.add("Pickle Relish");
-                        orderProductHelper("Pickle Relish", 100);
+                        if(orderProductHelper("Pickle Relish", 100)){
+                            orderList.add("Pickle Relish");
+                        }
                         break;
                     case 8:
                         System.out.println((orderList.toString()));
@@ -438,9 +554,15 @@ public class Main {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
         orderDone = false;
     }
 
+    /*
+       Updates meals/order tables once a meal has been ordered
+
+       @param meal - the meal that was ordered
+    */
     public static void orderMealHelper(String meal) throws SQLException {
         prepStmt = dbConnection.prepareStatement("INSERT INTO Meal_Order VALUES(?,?,?,?)");
         prepStmt.setString(1, ticketCorrector());
@@ -450,7 +572,14 @@ public class Main {
         prepStmt.executeUpdate();
     }
 
-    public static void orderProductHelper(String product,int quantity) throws SQLException {
+    /*
+       Queries to make sure the user can order more
+       product in their given restaurant.
+
+       @param product - product being ordered.
+       @param quantity - The amount being ordered
+    */
+    public static boolean orderProductHelper(String product,int quantity) throws SQLException {
         ResultSet temp;
 
         prepStmt = dbConnection.prepareStatement("Select  Quantity_On_Hand From products Where Product_Name = ? and Restaurant_Number = ?" );
@@ -467,9 +596,14 @@ public class Main {
             totalCost += Double.parseDouble(temp.getString("total"));
         } else {
             System.out.println("Too much already on hand");
+            return false;
         }
+        return true;
     }
 
+    /*
+       Updates products once they have arrived.
+    */
     public static void updateProduct() throws SQLException{
         String product = ""; Double quantity;
         orderDone = true;
@@ -530,6 +664,10 @@ public class Main {
         }
 
     }
+
+    /*
+       Changes the ticket to specified database format
+    */
     public static String ticketCorrector(){
         String temp = String.valueOf(currentTicket);
         while (temp.length() < 3){
@@ -537,7 +675,11 @@ public class Main {
         }
         return temp;
     }
-    // int Ticket, int restNum, String[] Meal_list
+
+    /*
+       Prompts to place an order, inserts in the orders
+       once promptWorker() has run.
+    */
     public static void placeOrder() {
         System.out.println("Pick Meal:");
         System.out.println("1 - Hamburger");
@@ -575,6 +717,12 @@ public class Main {
         currentTicket++;
         orderList = new ArrayList<>();
     }
+
+    /*
+       Reads a data Query
+
+       @param query - the query you want printed out
+    */
     public static void readQueryData(String query) throws SQLException {
         myRs = Stmt.executeQuery(query);
         ResultSetMetaData rsmd = myRs.getMetaData();
